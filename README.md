@@ -1,1 +1,7 @@
-# aws-iot-dotnet-publisher-http
+## AWS Iot Dotnet Publisher Http
+
+
+
+## License
+
+This library is licensed under the Apache 2.0 License. 
