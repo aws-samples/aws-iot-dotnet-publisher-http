@@ -53,7 +53,7 @@ namespace Awsiotdevicepubhttp
             Random r = new Random();
 
 
-            string requesturi = @"https://a1775y1qp2whis.iot.us-east-1.amazonaws.com:8443/topics/iotbutton/virtualButton?qos=1";
+            string requesturi = @"https://youriotendpoint:8443/topics/iotbutton/virtualButton?qos=1";
 
             th.ThermostatID = r.Next(10000);
             th.SetPoint = r.Next(32, 100);
