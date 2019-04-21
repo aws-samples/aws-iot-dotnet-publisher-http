@@ -152,7 +152,7 @@ Add a static method called InvokeHttpPost with the following implementation.
             Random r = new Random();
 
 
-            string requesturi = @"https://a1775y1qp2whis.iot.us-east-1.amazonaws.com:8443/topics/iotbutton/virtualButton?qos=1";
+            string requesturi = @"https://youriotendpoint.iot.us-east-1.amazonaws.com:8443/topics/iotbutton/virtualButton?qos=1";
 
             th.ThermostatID = r.Next(10000);
             th.SetPoint = r.Next(32, 100);
@@ -319,7 +319,7 @@ private static async Task<string> InvokeHttpPost(X509Certificate2 root, X509Cert
             Random r = new Random();
 
 
-            string requesturi = @"https://a1775y1qp2whis.iot.us-east-1.amazonaws.com:8443/topics/iotbutton/virtualButton?qos=1";
+            string requesturi = @"https://youriotendpoint.iot.us-east-1.amazonaws.com:8443/topics/iotbutton/virtualButton?qos=1";
 
             th.ThermostatID = r.Next(10000);
             th.SetPoint = r.Next(32, 100);
