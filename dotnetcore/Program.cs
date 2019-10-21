@@ -1,17 +1,13 @@
 ﻿
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 using System.Threading;
 using System.Net;
-using System.Web;
-using System.Net.Http;
-using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.IO;
 using Newtonsoft.Json;
+using dotnetcore.utils;
+using System.Collections.Generic;
 
 namespace dotnetcore
 {
@@ -19,79 +15,42 @@ namespace dotnetcore
     {
         static void Main(string[] args)
         {
-             var CaCert = X509Certificate.CreateFromCertFile(@"root-CA.crt");
+            var clientCert = new X509Certificate2(Path.Join(AppContext.BaseDirectory, "certificate.cert.pfx"), "MyPassword1");
 
-            // new changes
-            var CaCertNew = new X509Certificate2(CaCert);
-           
-            var ClientCert = new X509Certificate2(@"WinIOTDevice.pfx", "password1");
-            Thermostat thermostat = new Thermostat();
-
+            string requestUri = @"https://youriotendpoint.iot.us-east-1.amazonaws.com/topics/iotbutton/virtualButton?qos=1";
 
             while (true)
             {
+                Thermostat thermostat = new Thermostat();
+                Random random = new Random();
+                thermostat.ThermostatID = random.Next(10000);
+                thermostat.SetPoint = random.Next(32, 100);
+                thermostat.CurrentTemperature = random.Next(32, 100);
 
-              
-                InvokeHttpPost(CaCertNew, ClientCert, thermostat).Wait();
+                InvokeHttpPost(requestUri, clientCert, thermostat);
 
                 Thread.Sleep(5000);
             }
         }
 
-         private static async Task<string> InvokeHttpPost(X509Certificate2 root, X509Certificate2 device, Thermostat th)
+        private static void InvokeHttpPost<T>(string requestUri, X509Certificate2 clientCert, T postData)
         {
-                     
+            string serializedPostData = JsonConvert.SerializeObject(postData);
+            Logger.LogInfo($"Publishing {serializedPostData}");
+            byte[] byteArray = Encoding.UTF8.GetBytes(serializedPostData);
 
-            Random r = new Random();
-
-
-            string requesturi = @"https://youriotendpoint.iot.us-east-1.amazonaws.com:8443/topics/iotbutton/virtualButton?qos=1";
-
-            th.ThermostatID = r.Next(10000);
-            th.SetPoint = r.Next(32, 100);
-
-            th.CurrentTemperature = r.Next(32, 100);
-
-            string postData = JsonConvert.SerializeObject(th);
-
-            byte[] byteArray = Encoding.UTF8.GetBytes(postData);
-
-            HttpWebRequest request = (HttpWebRequest)WebRequest.Create(requesturi);
-
-
+            HttpWebRequest request = (HttpWebRequest)WebRequest.Create(requestUri);
             request.Method = "POST";
             request.ContentLength = byteArray.Length;
             request.ContentType = "application/x-www-form-urlencoded";
             request.KeepAlive = true;
-            request.ClientCertificates.Add(root);
-            request.ClientCertificates.Add(device);
-
+            request.ClientCertificates.Add(clientCert);
 
             Stream dataStream = request.GetRequestStream();
             dataStream.Write(byteArray, 0, byteArray.Length);
             dataStream.Close();
 
-
-            HttpWebResponse response = (HttpWebResponse)request.GetResponse();
-
-            string responseString;
-            StreamReader responseReader = new StreamReader(response.GetResponseStream());
-
-            responseString = responseReader.ReadToEnd();
-
-            if (responseString.Contains("OK"))
-            {
-                Console.WriteLine(responseString);
-            }
-
-            else
-            {
-                Console.WriteLine("Not successful" + responseString);
-
-            }
-
-            return responseString;
-        }   
-      
+            HttpHelpers.GetResponse(request);
+        }
     }
 }
