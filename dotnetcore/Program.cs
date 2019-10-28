@@ -16,8 +16,7 @@ namespace dotnetcore
         static void Main(string[] args)
         {
             var clientCert = new X509Certificate2(Path.Join(AppContext.BaseDirectory, "certificate.cert.pfx"), "MyPassword1");
-
-            string requestUri = @"https://youriotendpoint.iot.us-east-1.amazonaws.com/topics/iotbutton/virtualButton?qos=1";
+            string requestUri = @"https://<<your-iot-endpoint>>:8443/topics/iotbutton/virtualButton?qos=1";
 
             while (true)
             {
