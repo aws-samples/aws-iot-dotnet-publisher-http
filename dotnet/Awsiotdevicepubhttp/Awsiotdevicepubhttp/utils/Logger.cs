@@ -8,8 +8,6 @@ namespace Awsiotdevicepubhttp.utils
         private static readonly ILog log =
            LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
 
-        private static bool IsLog4netConfigured;
-
         public static void LogInfo(string message)
         {
             log.Info(message);
