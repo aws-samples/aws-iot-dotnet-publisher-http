@@ -1,8 +1,8 @@
 # 1. Overview
 
-There are multiple options available for publishing and subscribing messages with AWS IOT Core. The message broker supports the use of the MQTT protocol to publish and subscribe and the HTTPS protocol to publish. Both protocols are supported through IP version 4 and IP version 6. The message broker also supports MQTT over the WebSocket protocol.
+There are multiple options available for publishing and subscribing messages with AWS IoT Core. The message broker supports the use of the MQTT protocol to publish and subscribe and the HTTPS protocol to publish. Both protocols are supported through IP version 4 and IP version 6. The message broker also supports MQTT over the WebSocket protocol.
 
-Here is a simple table that shows various protocol and port options available for handshake with AWS IOT Core.
+Here is a simple table that shows various protocol and port options available for handshake with AWS IoT Core.
 
 |No |Protocol        |Authentication     |Port    |
 |---|----------------|-------------------|------- |
@@ -13,17 +13,31 @@ Here is a simple table that shows various protocol and port options available fo
 
 More details are available here https://docs.aws.amazon.com/iot/latest/developerguide/protocols.html
 
-In this post, we'll cover the option #2 of leveraging ClientCertificate and HTTP protocol for ingesting message into AWS IOT core. Very specifically, we'll leverage Microsoft .NET and .NET core for achieving the same. Creating this sample implementation will help IOT applications running in 'App Plane' to handshake with AWS IOT Core. We mean, the applications such as .NET Console app, ASP.NET MVC app, .NET Core console app, ASP.NET core mvc app and Xamarain cross platform mobile applications. 
+In this post, we'll cover the option #2 of leveraging ClientCertificate and HTTP protocol for ingesting message into AWS IoT Core. Very specifically, we'll leverage Microsoft .NET and .NET Core for achieving the same. Creating this sample implementation will help IoT applications running in 'App Plane' to handshake with AWS IoT Core. We mean, the applications such as .NET Console app, ASP.NET MVC app, .NET Core console app, ASP.NET Core mvc app, and Xamarain cross platform mobile applications. 
 
+## 2 Create an AWS IoT Thing
 
-# 2. Create an AWS IOT Device
+You can run the automated provisioning script to create an AWS IoT thing, or choose to walk through the provisioning actions manually in the console.
+
+## Running the provisioning script
+
+Navigate to the 'dotnet' folder and execute the provision_thing.ps1 PowerShell script.  This script handles the setup for the .NET Framework examples in this repository including:
+
+- Downloading the Amazon Root CA certificate.
+- Generating a new certificate in AWS IoT.
+- Converting the private key to .PFX format.
+- Registering an AWS IoT thing with the created certificate.
+- Configuring the sample code to use your account's AWS IoT custom endpoint URL.
+
+You can skip to section 3 if you chose to execute the script.
+
+## Manually Creating an AWS IoT Thing
+
+Alternatively, you can manually create an IoT thing using the AWS IoT console.  To start, let's navigate to the console and create an IoT thing called 'dotnetdevice'.
 
 ![](/images/pic1.JPG)
 
-
-
-Let's create an AWS IOT device with any arbitrary name and associate the following IAM policy to the X509 certificate of the device.
-
+Let's associate the following policy with the thing.
 
 ``` json
 {
@@ -45,22 +59,22 @@ Let's create an AWS IOT device with any arbitrary name and associate the followi
 }
 ``` 
 
-The above IAM policy grants Publish, Subscribe, Connect and Receive action on all the AWS IOT core resource (topics). In the real world implemenation, this policy needs to be restricted to the required topics and actions.
+The above IAM policy grants Publish, Subscribe, Connect, and Receive action on all the AWS IoT Core resource (topics). In the real world implemenation, this policy needs to be restricted to the required topics and actions.
 
-During the Thing creation process you should get the following four security artifacts.
+During the Thing creation process you should get the following four security artifacts. Start by creating a 'certificates' folder at 'dotnet\certificates'.
 
-a)**Device certificate** - This file usually ends with ".pem.crt". When you download this it will save as .txt file extension in windows. Save it as 'dotnet-devicecertificate.pem' for convenience and make sure that it is of file type '.pem', not 'txt' or '.crt'
+- **Device certificate** - This file usually ends with ".pem.crt". When you download this it will save as .txt file extension in windows. Save it in your certificates directory as 'certificates\certificate.cert.pem' and make sure that it is of file type '.pem', not 'txt' or '.crt'
 
-b)**Device public key** - This file usually ends with ".pem" and is of file type ".key".  Rename this file as 'dotnet-public.pem' for convenience. 
+- **Device public key** - This file usually ends with ".pem" and is of file type ".key".  Save this file as 'certificates\certificate.public.key'. 
 
-c)**Device private key** -  This file usually ends with ".pem" and is of file type ".key".  Rename this file as 'dotnet-private.pem' for convenience. Make sure that this file is referred with suffix ".key" in the code while making MQTT connection to AWS IOT.
+- **Device private key** -  This file usually ends with ".pem" and is of file type ".key".  Save this file as 'certificates\certificate.private.key'. Make sure that this file is referred with suffix ".key" in the code while making MQTT connection to AWS IoT.
 
-d)**Root certificate** - The default name for this file is VeriSign-Class 3-Public-Primary-Certification-Authority-G5.pem and rename it as "root-CA.crt" for convenience.
+- **Root certificate** - Download from https://www.amazontrust.com/repository/AmazonRootCA1.pem.  Save this file to 'certificates\AmazonRootCA1.crt'
 
 
-# 3. Converting device certificate from .pem to .pfx
+### Converting device certificate from .pem to .pfx
 
-In order to establish an MQTT connection with the AWS IOT platform, root CA certificate, private key of the Thing and the Certificate of the Thing are needed. The .NET Cryptographic APIs can understand root CA (.crt) and device private key (.key) out-of-box. It expects the device certificate to be in the .pfx format, not in the .pem format. Hence we need to convert the device certificate from .pem to .pfx.
+In order to establish an MQTT connection with the AWS IoT platform, the root CA certificate, private key of the thing and the certificate of the thing are needed. The .NET Cryptographic APIs can understand root CA (.crt) and device private key (.key) out-of-the-box. It expects the device certificate to be in the .pfx format, not in the .pem format. Hence we need to convert the device certificate from .pem to .pfx.
 
 We'll leverage the openssl for converting .pem to .pfx. Navigate to the folder where all the security artifacts are present and launch bash for Windows 10.
 
@@ -70,333 +84,56 @@ openssl pkcs12 -export -in **iotdevicecertificateinpemformat** -inkey **iotdeviv
 
 If you replace with actual file names the syntax will look like below.
 
-openssl pkcs12 -export -in dotnet-devicecertificate.pem -inkey dotnet-private.pem.key -out dotnet_devicecertificate.pfx -certfile root-CA.crt
+openssl pkcs12 -export -in certificates\certificate.cert.pem -inkey certificates\certificate.private.key -out certificates\certificate.cert.pfx -certfile certificates\AmazonRootCA1.crt
 
-<p align="center">
-<img src="/images/pic3.JPG">
-</p>
+![](/images/pic3.JPG)
 
+# 3. AWS IoT Device Publisher using HTTPS & X509 certificates with .NET Framework
 
-# 4. AWS IOT Device Publisher using HTTPS & X509 certificates on Windows
-
-## 4a. Development environment
+## 3a. Development environment
 - Windows 10 with latest updates
 - Visual Studio 2017 with latest updates
 - Windows Subsystem for Linux 
 
-## 4b. Visual Studio Solution & Project
+## 3b. Visual Studio Solution & Project
 
-Create a visual studio 2017 console project with name 'Awsiotdevicepubhttp'.
+Open the solution file located at 'dotnet\Awsiotdevicepubhttp\Awsiotdevicepubhttp.sln' and navigate to the Program.cs class.
 
-Make sure that the following namespaces are imported in the program.cs file.
-``` c#
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Threading;
-using System.Net;
-using System.Web;
-using System.Net.Http;
-using System.Security.Cryptography;
-using System.Security.Cryptography.X509Certificates;
-using System.IO;
-using Newtonsoft.Json;
-```
+This sample application demonstrates the use of client certificates with an HTTP request to communicate with AWS IoT Core.  It creates a random object and publishes that object to the AWS IoT Core custom endpoint using the client certificate created in step 2.  It repeats this process every 5 seconds to emulate an actual IoT device sending device updates to AWS IoT Core.
 
-Add a new class called 'Thermostat.cs' to the project. It should look like below.
-``` c#
-class Thermostat
-    {
-        public int ThermostatID { get; set; }
+The InvokeHttpPost method takes an object of any type, serializes it to JSON, and then publishes that object as the payload of the HTTP request.
 
-        public int SetPoint { get; set; }
-
-        public int CurrentTemperature { get; set; }
-
-       
-    }
-  ``` 
-
-In the static main method add the following lines of code to load the X509certificate2 of the device and X509Certificate of the root into objects namely 'ClientCert' and 'CaCert'. Also invoke the static method 'InvokeHttpPost' every 5 seconds for ingesting JSON data into AWS IOT topic.
-
-``` c#
-            var CaCert = X509Certificate.CreateFromCertFile(@"C:\PythonIotsamples\root-CA.crt");
-            var ClientCert = new X509Certificate2(@"C:\PythonIotsamples\WinIOTDevice.pfx", "password1");
-            Thermostat thermostat = new Thermostat();
-           
-
-            while (true)
-            {
-
-               InvokeHttpPost(CaCert, ClientCert,thermostat).Wait();
-
-                Thread.Sleep(5000);
-            }
-``` 
-
-
-Add a static method called InvokeHttpPost with the following implementation.
-
-
-``` c#
-	
-	
-        private static async Task<string> InvokeHttpPost(X509Certificate root, X509Certificate2 device, Thermostat th)
-        {
-
-
-
-
-            Random r = new Random();
-
-
-            string requesturi = @"https://youriotendpoint.iot.us-east-1.amazonaws.com:8443/topics/iotbutton/virtualButton?qos=1";
-
-            th.ThermostatID = r.Next(10000);
-            th.SetPoint = r.Next(32, 100);
-
-            th.CurrentTemperature = r.Next(32, 100);
-
-            string postData = JsonConvert.SerializeObject(th);
-
-            byte[] byteArray = Encoding.UTF8.GetBytes(postData);
-
-            HttpWebRequest request = (HttpWebRequest)WebRequest.Create(requesturi);
-
-
-            request.Method = "POST";
-            request.ContentLength = byteArray.Length;
-            request.ContentType = "application/x-www-form-urlencoded";
-            request.KeepAlive = false;
-            request.ClientCertificates.Add(root);
-            request.ClientCertificates.Add(device);
-
-
-            Stream dataStream = request.GetRequestStream();
-            dataStream.Write(byteArray, 0, byteArray.Length);
-            dataStream.Close();
-
-
-            HttpWebResponse response = (HttpWebResponse)request.GetResponse();
-
-            string responseString;
-            StreamReader responseReader = new StreamReader(response.GetResponseStream());
-
-            responseString = responseReader.ReadToEnd();
-
-            if (responseString.Contains("OK"))
-            {
-                Console.WriteLine(responseString);
-            }
-
-            else
-            {
-                Console.WriteLine("Not successful" + responseString);
-
-            }
-
-            return responseString;
-        }  
-      
-``` 
-
-Instead of hard coding the AWS IOT Http endpoint url, you can also ead it from app.config file. 
-
-## 4c. App.Config file changes
-
-``` XML
-Add the following snippet in the web.config file.
- <system.net>
-    <settings>
-      <httpWebRequest useUnsafeHeaderParsing="true" />
-    </settings>
-  </system.net>
-  ``` 
-If the above app.config file entires are not added,  executing the above piece of code will throw an exception of type "The server committed a protocol violation". More information about this app.config flag is available in this documentation https://docs.microsoft.com/en-us/dotnet/api/system.net.configuration.httpwebrequestelement.useunsafeheaderparsing?view=netframework-4.7.2
-
-## 4d. Compile, Run and Verify messages sent to AWS IOT Core
+## 3c. Compile, Run and Verify messages sent to AWS IoT Core
 Compile and run the above code. You should see the following output in the console.
 
+![](/images/pic4.jpg)
 
-<p align="center">
-<img src="/images/pic4.JPG">
-</p>
+You should also see the JSON messages succesfully ingested in AWS IoT Core as well.
 
-You should also see the JSON messages succesfully ingested in AWS IOT core as well.
+![](/images/pic5.JPG)
 
-<p align="center">
-<img src="/images/pic7.JPG">
-</p>
+# 4. AWS IoT Device Publisher using HTTPS & X509 certificates with .NET Core
 
+## 4a. Create an AWS IoT Thing 
 
-# 5. AWS IOT Device Publisher using HTTPS & X509 certificates on Mac OS or Linux
+Navigate to the 'dotnetcore' folder and execute the provision_thing.sh shell script.  This script handles the setup for the .NET Core examples, following the same steps as the PowerShell script in the .NET Framework examples.
 
-## 5a. Development environment
-- Mac OS with latest updates (or) Supported Linux distros for .NET core with latest updates
+Alternatively, you can copy the certificates created in the .NET Framework example to a 'dotnetcore\certificates' folder or follow the same steps to create a new Thing and certificate.
+
+## 4b. Development environment
+- Mac OS with latest updates (or) Supported Linux distros for .NET Core with latest updates
 - .NET Core 2.1 or higher
 - Visual Studio Code
 
-## 5b. Create Console application project in Dotnetcore
+## 4c. Visual Studio Project
 
-Invoke the following commands in the terminal to create a sample console application project in .NET core.
+Open the project file located at 'dotnetcore\dotnetcore.csproj' and navigate to the Program.cs class.
 
-``` shell
-$dotnet new console
-$dotnet restore
-$dotnet run
-``` 
+This sample application demonstrates the use of client certificates with an HTTP request to communicate with AWS IoT Core.  It creates a random object and publishes that object to the AWS IoT Core custom endpoint using the client certificate created in step 2.  It repeats this process every 5 seconds to emulate an actual IoT device sending device updates to AWS IoT Core.
 
+The InvokeHttpPost method takes an object of any type, serializes it to JSON, and then publishes that object as the payload of the HTTP request.
 
-Make sure that the following namespaces are imported in the program.cs file.
-``` c#
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Threading;
-using System.Net;
-using System.Web;
-using System.Net.Http;
-using System.Security.Cryptography;
-using System.Security.Cryptography.X509Certificates;
-using System.IO;
-using Newtonsoft.Json;
-```
-
-Add a reference to the package 'Newtonsoft.Json' package by issuing the below command.
-
-``` shell
-$dotnet add package 'Netwonsoft.Json'
-``` 
-
-Add a new class called 'Thermostat.cs' to the project. It should look like below.
-``` c#
-class Thermostat
-    {
-        public int ThermostatID { get; set; }
-
-        public int SetPoint { get; set; }
-
-        public int CurrentTemperature { get; set; }
-
-       
-    }
-  ``` 
-
- In the static void main method implement the following.
-
-``` c#
-
- var CaCert = X509Certificate.CreateFromCertFile(@"root-CA.crt");
-
-            // new changes
-            var CaCertNew = new X509Certificate2(CaCert);
-           
-            var ClientCert = new X509Certificate2(@"yourdevicecert.pfx", "passphrase");
-            Thermostat thermostat = new Thermostat();
-
-
-            while (true)
-            {
-
-              
-                InvokeHttpPost(CaCertNew, ClientCert, thermostat).Wait();
-
-                Thread.Sleep(5000);
-            }
-```
-
-Implement the InvokeHttpPost method like the following.
-
-``` c#
-private static async Task<string> InvokeHttpPost(X509Certificate2 root, X509Certificate2 device, Thermostat th)
-        {
-                     
-
-            Random r = new Random();
-
-
-            string requesturi = @"https://youriotendpoint.iot.us-east-1.amazonaws.com:8443/topics/iotbutton/virtualButton?qos=1";
-
-            th.ThermostatID = r.Next(10000);
-            th.SetPoint = r.Next(32, 100);
-
-            th.CurrentTemperature = r.Next(32, 100);
-
-            string postData = JsonConvert.SerializeObject(th);
-
-            byte[] byteArray = Encoding.UTF8.GetBytes(postData);
-
-            HttpWebRequest request = (HttpWebRequest)WebRequest.Create(requesturi);
-
-
-            request.Method = "POST";
-            request.ContentLength = byteArray.Length;
-            request.ContentType = "application/x-www-form-urlencoded";
-            request.KeepAlive = true;
-            request.ClientCertificates.Add(root);
-            request.ClientCertificates.Add(device);
-
-
-            Stream dataStream = request.GetRequestStream();
-            dataStream.Write(byteArray, 0, byteArray.Length);
-            dataStream.Close();
-
-
-            HttpWebResponse response = (HttpWebResponse)request.GetResponse();
-
-            string responseString;
-            StreamReader responseReader = new StreamReader(response.GetResponseStream());
-
-            responseString = responseReader.ReadToEnd();
-
-            if (responseString.Contains("OK"))
-            {
-                Console.WriteLine(responseString);
-            }
-
-            else
-            {
-                Console.WriteLine("Not successful" + responseString);
-
-            }
-
-            return responseString;
-        }
-
-```
-
-## 5c. Code changes specific to .NET core running on Linux or Mac
-
-If you look at the above code-snippet it is not exactly one and the same written for .NET running on windows (section 4b). The crux of the above code is all about programmatically sending HTTP Post request to AWS IOT Core by adding root certificate & device certificate and also setting the required POST parameters. HttpWebRequest object in .NET core expects both the certificates to be of the type 'X509Certificate2', unlike the .NET framework for windows. Hence we are constructing both the certificates of type 'X509Certificate2'.
-
-
-``` c#
-
- var CaCert = X509Certificate.CreateFromCertFile(@"root-CA.crt");
-
-            // changes specific to .NET core
-            var CaCertNew = new X509Certificate2(CaCert);
-           
-            var ClientCert = new X509Certificate2(@"yourdevicecert.pfx", "passphrase");
-``` 
-
-
-If you look at the below code sample written for .NET framework running on windows, the root certificate is constructed as object of type 'X509Certificate' and the device certificate is constructed as 'X509Certificate2'.
-
-``` c#
- var CaCert = X509Certificate.CreateFromCertFile(@"C:\PythonIotsamples\root-CA.crt");
-var ClientCert = new X509Certificate2(@"Yourdevicecert", "passphrase");
-
-```
-
-If we follow the above approach in .NET core, it will throw a type cast exception. To fix this, we are constructing both the certificates of type 'X509Certificate2' in .NET core. 
-
-
-## 5d. Compile and run the code
+## 4d. Compile and run the code
 
 Invoke the following commands in the terminal to compile and run the code.
 
@@ -407,36 +144,22 @@ dotnet build
 dotnet run
 ```
 
-## 5e. Verify the messages
+## 4e. Verify the messages
 
+You should see messages getting successfully ingested into AWS IoT Core from the console output.
 
-You should see messages getting successfully ingested into AWS IOT Core from the console output.
+![](/images/pic6.jpg)
 
+Subscribe to the topic 'iotbutton/virtualButton' in  AWS IoT Core.
 
-<p align="center">
-<img src="/images/pic6.JPG">
-</p>
-
-Subscribe to the topic 'iotbutton/virtualButton' in  AWS IOT Core.
-
-
-<p align="center">
-<img src="/images/pic7.JPG">
-</p>
+![](/images/pic7.jpg)
 
 You should see JSON Thermostat messages getting ingested sucessfully into the topic.
 
+![](/images/pic5.jpg)
 
-<p align="center">
-<img src="/images/pic5.JPG">
-</p>
+The complete code sample for this .NET Core implemenation is available in the folder named 'dotnetcore' in this Github repository.
 
-The complete code sample for this .NET core implemenation is available in the folder named 'dotnetcore' in this Github repository.
+# 5. Conclusion
 
-
-# 6. Conclusion
-In this post, we created a .NET sample running on windows, posting messages to AWS IOT Core. This example leveraged HTTPS protocol and Device Cerrtificate (X509Certificate) for interacting with AWS Iot Core. We also have created another sample in .NET core publishing messages to AWS IOT Core, achieving the same purpose. This completes the post of creating an AWS IOT Device publisher using HTTPs and Device Certificate, in .NET and .NET core. 
-
-
-
-
+In this post, we created a .NET sample running on Windows, posting messages to AWS IoT Core. This example leveraged HTTPS protocol and Device Cerrtificate (X509Certificate) for interacting with AWS IoT Core. We also have created another sample in .NET Core publishing messages to AWS IoT Core, achieving the same purpose. This completes the post of creating an AWS IoT Device publisher using HTTPs and Device Certificate, in .NET and .NET Core.
