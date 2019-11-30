@@ -9,6 +9,7 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyDescription("")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("")]
+[assembly: log4net.Config.XmlConfigurator(Watch = true)]
 [assembly: AssemblyProduct("Awsiotdevicepubhttp")]
 [assembly: AssemblyCopyright("Copyright ©  2018")]
 [assembly: AssemblyTrademark("")]

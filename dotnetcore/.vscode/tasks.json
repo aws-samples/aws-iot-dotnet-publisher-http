@@ -9,6 +9,10 @@
                 "build",
                 "${workspaceFolder}/dotnetcore.csproj"
             ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
             "problemMatcher": "$msCompile"
         }
     ]
